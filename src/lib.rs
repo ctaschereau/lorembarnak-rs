@@ -2,6 +2,7 @@
 
 use rand::Rng;
 use regex::Regex;
+use case::CaseExt;
 
 // TODO : Should I define a new type for this?
 // TODO : Should I have a static lifetime for this???
@@ -44,14 +45,12 @@ fn get_all_swears() -> Vec<SwearVariants> {
     ]
 }
 
-/**
-TODO rust doc
- * Generates a chain of Québécois obscenities.
- * @param {number} [nbRequested] Optional number of swears to chain
- * @return {string}
- */
-// TODO export function getText(nbRequested?: number): string {
-fn get_text(nb_requested_option: Option<i16>) -> String {
+/// Generates a chain of Québécois obscenities.
+/// ```
+/// # use lorembarnak_rs;
+/// println!("{}", lorembarnak_rs::get_text(Some(5)));
+/// ```
+pub fn get_text(nb_requested_option: Option<i16>) -> String {
     let nb_requested = nb_requested_option.unwrap_or_else(|| random_i16(4) + 6);
 
     let mut remaining = get_all_swears();
@@ -60,8 +59,6 @@ fn get_text(nb_requested_option: Option<i16>) -> String {
     let mut previous_index: Option<i16> = None;
 
     for i in 0 .. nb_requested {
-        let family: &mut SwearVariants;
-        let current: &str;
         let mut current_index: Option<i16> = None;
 
         // If we've run out of remaining swears or only the previous family remains, reinitialize remaining.
@@ -73,11 +70,11 @@ fn get_text(nb_requested_option: Option<i16>) -> String {
         while current_index.is_none() || current_index == previous_index || remaining[current_index.unwrap() as usize].contains(&previous_swear) {
             current_index = Some(random_i16(remaining.len() as i16));
         }
-        family = remaining.get_mut(current_index.unwrap() as usize).unwrap();
+        let family: &mut SwearVariants = remaining.get_mut(current_index.unwrap() as usize).unwrap();
         previous_index = current_index;
 
         // Choose a random swear, and delete the family if empty.
-        current = family.remove(random_i16(family.len() as i16) as usize);
+        let current: &str = family.remove(random_i16(family.len() as i16) as usize);
         previous_swear = current;
         if family.is_empty() {
             remaining.remove(current_index.unwrap() as usize);
@@ -86,7 +83,7 @@ fn get_text(nb_requested_option: Option<i16>) -> String {
 
         // Capitalize the fist swear, add an article prefix to others.
         if i == 0 {
-            result.push_str(capitalize(current).as_str());
+            result.push_str( current.to_capitalized().as_str());
         } else {
             result.push_str(with_article(current).as_str());
         }
@@ -113,11 +110,9 @@ fn with_article(s : &str) -> String {
     if STARTS_WITH_PREFIX.is_match(s) {
         // If it already starts with "de" or "d’", don't add another.
         prefix = "";
-
     } else if STARTS_WITH_VOWEL.is_match(s) {
         // If it starts with a vowel, prepend with "d'"
         prefix = "d’";
-
     } else {
         // Otherwise prepend with "de"
         prefix = "de ";
@@ -126,20 +121,25 @@ fn with_article(s : &str) -> String {
     format!("{}{}", prefix, s)
 }
 
-fn capitalize(s: &str) -> String {
-    let mut big_s = String::from(s);
-    let s2 = big_s.split_off(1);
-    big_s.make_ascii_uppercase();
-    big_s.push_str(s2.as_str());
-    big_s
-}
-
 fn random_i16(max: i16) -> i16 {
     let mut rng = rand::thread_rng();
     rng.gen_range(0, max)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-fn main() {
-    println!("{}", get_text(Some(10)));
+    #[test]
+    fn with_article_works() {
+        assert_eq!(with_article("tabarnak"), "de tabarnak");
+        assert_eq!(with_article("d’ostie"), "d’ostie");
+        assert_eq!(with_article("ostie"), "d’ostie");
+    }
+
+    #[test]
+    fn random_works() {
+        assert!(random_i16(100) >= 0);
+        assert!(random_i16(100) < 100);
+    }
 }
